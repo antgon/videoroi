@@ -21,7 +21,7 @@ class Video:
             self.frame_count = int(self.capture.get(
                 cv2.CAP_PROP_FRAME_COUNT))
             fourcc = int(self.capture.get(cv2.CAP_PROP_FOURCC))
-            self.fourcc = fourcc.to_bytes(4, sys.byteorder)
+            self.fourcc = fourcc.to_bytes(4, sys.byteorder).decode()
             self.duration = self.frame_count / self.fps
 
     def read(self, frame_number=None):

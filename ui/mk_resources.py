@@ -5,7 +5,8 @@ resources.qrc file.
 
 import os
 
-iconsdir = './icons'
+#iconsdir = './icons'
+iconsdir = 'icons'
 out_qrc  = 'resources.qrc'
 out_py   = 'resources_rc.py'
 icons = [f for f in os.listdir(iconsdir) if f[-4:] in ('.svg', '.png', '.jpg')]

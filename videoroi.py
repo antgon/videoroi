@@ -5,7 +5,9 @@ import sys, os
 
 from PyQt4.QtGui import (QMainWindow, QWidget, QMessageBox,
                          QApplication, QFont, QDialog,
-                         QFileDialog, QLabel)
+                         QFileDialog, QLabel,
+                         QProgressDialog)
+from PyQt4.QtCore import (Qt)
 import pyqtgraph as pg
 import numpy as np
 import cv2
@@ -25,8 +27,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         QWidget.__init__(self, parent)
         self.setupUi(self)
 
-        self.video = None
         self.rois = []
+        self.video = None
         self.intensity = None
         self.working_dir = '.'
 
@@ -48,12 +50,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def _init_statusbar(self):
         self.statusbar_left = QLabel()
-        self.statusbar_centre = QLabel()
         self.statusbar_right = QLabel()
         self.statusbar.addPermanentWidget(
-                self.statusbar_left, stretch=2)
-        self.statusbar.addPermanentWidget(
-                self.statusbar_centre, stretch=1)
+                self.statusbar_left, stretch=4)
         self.statusbar.addPermanentWidget(
                 self.statusbar_right, stretch=1)
 
@@ -62,18 +61,31 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.scrollbar.setMaximum(self.video.frame_count)
         self.scrollbar.setValue(0)
 
-    def setup_statusbar(self):
-        self.statusbar_left.setText("fps: {} | Duration: {}".format(
-            self.video.fps, self.video.get_duration()))
-        self.statusbar_centre.setText("00:00.00")
-        self.statusbar_right.setText("Frame 0/{}".format(
-            self.video.frame_count))
+    def setup_info(self):
+        self.max_frame = self.video.frame_count - 1
+        info_text = ('Framerate: {} fps | ' +
+                'Codec: {} | ' +
+                'Dimensions: {} x {}')
+        self.statusbar_left.setText(info_text.format(
+            self.video.fps,
+            self.video.fourcc,
+            self.video.width,
+            self.video.height))
+        self.left_label.setText('00:00.00')
+        self.centre_label.setText('Frame 0/{}'.format(
+            self.max_frame))
+        self.right_label.setText('-' + fmt_frame_to_time(
+            self.max_frame, self.video.fps))
+
+    # Scrollbar -------------------------------------------------------
 
     def on_scrollbar_valueChanged(self):
         if self.video is None:
             return
         frame_number = self.scrollbar.value()
         self.display_video_frame(frame_number)
+
+    # Display video ---------------------------------------------------
 
     def get_video_frame(self, frame_number):
         ret_val, frame = self.video.read(frame_number)
@@ -90,10 +102,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if frame_number < self.video.frame_count:
             self.frame, self.levels = self.get_video_frame(frame_number)
             self.img_item.setImage(self.frame, levels=self.levels)
-            self.statusbar_right.setText('Frame {}/{}'.format(
-                frame_number, self.video.frame_count))
-            self.statusbar_centre.setText(
-                    fmt_frame_to_time(frame_number, self.video.fps))
+            self.centre_label.setText("{}/{}".format(frame_number,
+                self.max_frame))
+            self.left_label.setText(fmt_frame_to_time(
+                frame_number, self.video.fps))
+            self.right_label.setText('-' + fmt_frame_to_time(
+                self.max_frame - frame_number, self.video.fps))
 
     def on_open_video_button_clicked(self, checked=None):
         if checked is None: return
@@ -117,15 +131,23 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # Read and display first frame.
         self.frame, levels = self.get_video_frame(frame_number=0)
         self.img_item.setImage(self.frame, levels)
+        self.view_box.setRange(xRange=(0, self.video.width),
+                yRange=(0, self.video.height))
 
         # Display video information.
         self.setWindowTitle(short_fname)
-        self.setup_statusbar()
+        #self.setup_statusbar()
         self.setup_scrollbar()
+        self.setup_info()
 
         # Enable ROI group box.
         self.roi_box.setEnabled(True)
-    
+
+    def on_reset_view_button_clicked(self, checked=None):
+        if checked is None: return
+        self.view_box.setRange(xRange=(0, self.video.width),
+                yRange=(0, self.video.height))
+        
     # ROI buttons -----------------------------------------------------
 
     def on_add_roi_button_clicked(self, checked=None):
@@ -144,38 +166,59 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         for roi in self.rois:
             self.view_box.removeItem(roi)
         self.rois = []
+        self.intensity = None
         self.fluorescence_box.setDisabled(True)
 
     # Fluorescence buttons --------------------------------------------
 
     def on_measure_button_clicked(self, checked=None):
         if checked is None: return
+        if len(self.rois) == 0: return
 
-        self.measure_button.setDisabled(True)
-        
+        self.statusbar_right.setText("")
+
+        # Set-up progress dialog.
+        total_frame_count = self.video.frame_count * len(self.rois)
+        total_frame_count -= 1
+        progress = QProgressDialog('Processing...', 'Cancel',
+                0, total_frame_count, parent=self)
+        progress.setWindowModality(Qt.WindowModal)
+
+        # Create array.
         frames = np.arange(self.video.frame_count)
         time = frames / self.video.fps
         self.intensity = np.empty([self.video.frame_count,
             len(self.rois)])
 
+        # Loop over ROIs and frames and calculate mean intensity.
         for (roi_number, roi) in enumerate(self.rois):
             mask = np.ones_like(self.frame)
             mask = roi.getArrayRegion(mask, self.img_item)
             mask = mask.astype('bool')
-            sys.stdout.write('\n')
             for frame_number in frames:
-                sys.stdout.write('Processing frame {}/{}\r'.format(
-                    frame_number, self.video.frame_count))
+                
+                # Update progress dialog.
+                progress_frame = frame_number + (
+                        roi_number * self.video.frame_count)
+                progress.setValue(progress_frame)
+
+                # If the user cancells, clear data.
+                if progress.wasCanceled():
+                    self.intensity = None
+                    return
+                
+                # Calculate ROI mean intensity.
                 frame, _ = self.get_video_frame(frame_number)
                 data = roi.getArrayRegion(frame, self.img_item)
                 mean_intensity = data[mask].mean()
                 self.intensity[frame_number, roi_number] = (
                         mean_intensity)
 
+        # Concatenate intensity data with frames / time.
         self.intensity = np.c_[frames, time, self.intensity]
 
+        # Print message to statusbar.
         self.statusbar_right.setText("Done")
-        self.measure_button.setEnabled(True)
 
     def on_plot_button_clicked(self, checked=None):
         if checked is None: return
@@ -193,6 +236,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         Save intensity data from ROIs in a tab-separated file.
         '''
         if checked is None: return
+        if self.intensity is None: return
 
         names = [roi.objectName() for roi in self.rois]
         header = ['frame', 'time'] + names
@@ -203,7 +247,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         filename = filename[0] + '.tab'
         np.savetxt(filename, self.intensity, fmt=fmt, header=header,
                 comments="")
-        self.statusbar_right.setText("Saved")
+        self.statusbar_right.setText("Data saved")
 
     # Quit button -----------------------------------------------------
 
@@ -230,4 +274,5 @@ if __name__ == "__main__":
         window.open_video(args.filename)
     window.show()
 
+    #self = window
     QApplication.instance().exec_()
