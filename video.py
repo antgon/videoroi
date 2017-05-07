@@ -1,4 +1,21 @@
 #! /usr/bin/env python3
+#
+# Copyright (c) 2016-2017 Antonio González
+#
+# This file is part of videoroi.
+#
+# Videoroi is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the License, or (at your
+# option) any later version.
+#
+# Videoroi is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with videoroi. If not, see <http://www.gnu.org/licenses/>.
 
 import sys
 import numpy as np
@@ -9,6 +26,13 @@ cv2_ver = cv2.__version__.split('.')
 assert int(cv2_ver[0]) >= 3
 
 class Video:
+    '''
+    A class for reading, seeking, and playing videos.
+
+    This class uses cv2.VideoCapture to open a video. It builds on top
+    of that class to provide useful functions to facilitate reading
+    frames from videos.
+    '''
     def __init__(self, filename):
         self.filename = filename
         self.capture = cv2.VideoCapture(filename)
@@ -26,7 +50,7 @@ class Video:
 
     def read(self, frame_number=None):
         if frame_number is not None:
-            self.seek_frame(frame_number)        
+            self.seek_frame(frame_number)
         return self.capture.read()
 
     def _on_trackbar(self, frame_number):

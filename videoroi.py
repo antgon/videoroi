@@ -1,44 +1,25 @@
 #!/usr/bin/env python3
 # coding=utf-8
+#
+# Copyright (c) 2016-2017 Antonio González
+#
+# This file is part of videoroi.
+#
+# Videoroi is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the License, or (at your
+# option) any later version.
+#
+# Videoroi is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with videoroi. If not, see <http://www.gnu.org/licenses/>.
 
-'''
-========
-VideoROI
-========
-
-Get fluorescence intensity from one or more regions of interest (ROI)
-in a video.
-
-Originally written to obtain fluorescence changes over time of cells in
-vitro that express a calcium indicator (GCaMP).
-
-
-How to use
-==========
-
-1. *Open* a video file.
-
-2. With the slider at the bottom of the widow navigate to a frame in the
-   video where a fluorescent cell or cells can be clearly seen. The
-   mouse can be used to zoom in/out (wheel) or move the field of view
-   (click and drag). *Reset view* displays the frame in full again after
-   zooming/dragging.
-
-3. Click *Add* to add a ROI. Drag the ROI to the cell of interest and
-   adjust its size and shape as necessary. More than one ROI can be
-   added. *Clear* will remove all ROIs.
-
-4. Click *Measure* to measure fluorescence in the ROIs across all
-   frames in the video.
-
-5. Click *Plot* to display a plot of raw fluorescence by frame.
-
-6. Click *Save* to save the data (fluorescence per ROI by frame). The
-   data will be saved as csv file in the same directory as the source
-   video.
-'''
-
-import sys, os
+import sys
+import os
 
 from PyQt5.QtWidgets import (QMainWindow, QWidget, QMessageBox,
                              QApplication, QDialog, QFileDialog,
@@ -52,11 +33,13 @@ import cv2
 from ui.ui_main import Ui_MainWindow
 from video import Video
 
+
 def fmt_frame_to_time(frame, fps):
     seconds = frame / fps
     minutes = seconds // 60
     seconds = seconds % 60
     return '{:02}:{:05.2f}'.format(int(minutes), seconds)
+
 
 class MainWindow(QMainWindow, Ui_MainWindow):
 
@@ -187,7 +170,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             return
         self.view_box.setRange(xRange=(0, self.video.width),
                 yRange=(0, self.video.height))
-        
+
     # ROI buttons -----------------------------------------------------
 
     def on_add_roi_button_clicked(self, checked=None):
@@ -241,7 +224,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             mask = roi.getArrayRegion(mask, self.img_item)
             mask = mask.astype('bool')
             for frame_number in frames:
-                
+
                 # Update progress dialog.
                 progress_frame = frame_number + (
                         roi_number * self.video.frame_count)
@@ -251,7 +234,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 if progress.wasCanceled():
                     self.intensity = None
                     return
-                
+
                 # Calculate ROI mean intensity.
                 frame, _ = self.get_video_frame(frame_number)
                 data = roi.getArrayRegion(frame, self.img_item)
@@ -282,7 +265,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         yfont = pg.QtGui.QFont()
         yfont.setPointSize(y_tick_fontsize)
         xfont.setPointSize(x_tick_fontsize)
-        
+
         x = self.intensity[:,0]
         self.plot_window = pg.GraphicsWindow(
                 title='Fluorescence intensity per ROI')
@@ -303,7 +286,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         '''
         Save intensity data from ROIs in a tab-separated file.
         '''
-        if checked is None: 
+        if checked is None:
             return
         if self.intensity is None:
             return
