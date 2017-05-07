@@ -322,8 +322,6 @@ if __name__ == "__main__":
             help='Open video')
     args = parser.parse_args()
 
-    args.filename = '/home/antgon/Archive/Published data/2016_Orx-DTR/GCaMP-in-vitro/2016-02-12_Orx-GCaMP/2016-02-12_002.avi'
-
     app = QApplication([])
     window = MainWindow()
     if args.filename:
