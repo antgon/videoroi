@@ -1,13 +1,50 @@
 #!/usr/bin/env python3
 # coding=utf-8
 
+'''
+========
+VideoROI
+========
+
+Get fluorescence intensity from one or more regions of interest (ROI)
+in a video.
+
+Originally written to obtain fluorescence changes over time of cells in
+vitro that express a calcium indicator (GCaMP).
+
+
+How to use
+==========
+
+1. *Open* a video file.
+
+2. With the slider at the bottom of the widow navigate to a frame in the
+   video where a fluorescent cell or cells can be clearly seen. The
+   mouse can be used to zoom in/out (wheel) or move the field of view
+   (click and drag). *Reset view* displays the frame in full again after
+   zooming/dragging.
+
+3. Click *Add* to add a ROI. Drag the ROI to the cell of interest and
+   adjust its size and shape as necessary. More than one ROI can be
+   added. *Clear* will remove all ROIs.
+
+4. Click *Measure* to measure fluorescence in the ROIs across all
+   frames in the video.
+
+5. Click *Plot* to display a plot of raw fluorescence by frame.
+
+6. Click *Save* to save the data (fluorescence per ROI by frame). The
+   data will be saved as csv file in the same directory as the source
+   video.
+'''
+
 import sys, os
 
-from PyQt4.QtGui import (QMainWindow, QWidget, QMessageBox,
-                         QApplication, QFont, QDialog,
-                         QFileDialog, QLabel,
-                         QProgressDialog)
-from PyQt4.QtCore import (Qt)
+from PyQt5.QtWidgets import (QMainWindow, QWidget, QMessageBox,
+                             QApplication, QDialog, QFileDialog,
+                             QLabel, QProgressDialog)
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QFont
 import pyqtgraph as pg
 import numpy as np
 import cv2
@@ -30,7 +67,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.rois = []
         self.video = None
         self.intensity = None
-        self.working_dir = '.'
+        self.working_dir = os.path.expanduser('~')
 
         self.fluorescence_box.setDisabled(True)
         self.roi_box.setDisabled(True)
@@ -110,12 +147,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.max_frame - frame_number, self.video.fps))
 
     def on_open_video_button_clicked(self, checked=None):
-        if checked is None: return
+        if checked is None:
+            return
         filename = QFileDialog.getOpenFileName(
                 self, caption='Open file...',
-                directory = self.working_dir,
+                directory=self.working_dir,
                 filter='Video files (*.avi *.mp4 *.mov)')
-        if not filename: return
+        filename = filename[0]
+        if not filename:
+            return
         self.open_video(filename)
 
     def open_video(self, filename):
@@ -136,7 +176,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # Display video information.
         self.setWindowTitle(short_fname)
-        #self.setup_statusbar()
         self.setup_scrollbar()
         self.setup_info()
 
@@ -144,14 +183,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.roi_box.setEnabled(True)
 
     def on_reset_view_button_clicked(self, checked=None):
-        if checked is None: return
+        if checked is None:
+            return
         self.view_box.setRange(xRange=(0, self.video.width),
                 yRange=(0, self.video.height))
         
     # ROI buttons -----------------------------------------------------
 
     def on_add_roi_button_clicked(self, checked=None):
-        if checked is None: return
+        if checked is None:
+            return
         centre = (self.video.width/2, self.video.height/2)
         roi = pg.EllipseROI(pos=centre, size=[50, 50], pen=(3, 9))
         roi.setObjectName('roi{}'.format(len(self.rois)))
@@ -161,8 +202,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.fluorescence_box.setEnabled(True)
 
     def on_clear_roi_button_clicked(self, checked=None):
-        if checked is None: return
-        if len(self.rois) == 0: return
+        if checked is None:
+            return
+        if len(self.rois) == 0:
+            return
         for roi in self.rois:
             self.view_box.removeItem(roi)
         self.rois = []
@@ -172,8 +215,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     # Fluorescence buttons --------------------------------------------
 
     def on_measure_button_clicked(self, checked=None):
-        if checked is None: return
-        if len(self.rois) == 0: return
+        if checked is None:
+            return
+        if len(self.rois) == 0:
+            return
 
         self.statusbar_right.setText("")
 
@@ -221,22 +266,47 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.statusbar_right.setText("Done")
 
     def on_plot_button_clicked(self, checked=None):
-        if checked is None: return
-        if self.intensity is None: return
+        if checked is None:
+            return
+        if self.intensity is None:
+            return
+
+        # Plot window properties. These should probably go in a
+        # configuration file/section, but for my current purposes it is
+        # just fine to have them here because in practice I never need
+        # to modify them.
+        x_tick_fontsize = 10
+        y_tick_fontsize = 10
+        plot_window_size = (600, 300)
+        xfont = pg.QtGui.QFont()
+        yfont = pg.QtGui.QFont()
+        yfont.setPointSize(y_tick_fontsize)
+        xfont.setPointSize(x_tick_fontsize)
+        
         x = self.intensity[:,0]
-        win = pg.GraphicsWindow()
+        self.plot_window = pg.GraphicsWindow(
+                title='Fluorescence intensity per ROI')
         for c, y in enumerate(self.intensity[:,2:].T):
-            plt = win.addPlot()
+            plt = self.plot_window.addPlot()
             plt.plot(x, y, pen=(3, 9))
-            win.nextRow()
-        win.show()
+            # Set x-axis label.
+            plt.setLabel('bottom', 'Frame')
+            plt.getAxis('bottom').tickFont = xfont
+            # Set y-axis label.
+            plt.setLabel('left', 'Raw intensity')
+            plt.getAxis('left').tickFont = yfont
+            self.plot_window.nextRow()
+        self.plot_window.resize(*plot_window_size)
+        self.plot_window.show()
 
     def on_save_button_clicked(self, checked=None):
         '''
         Save intensity data from ROIs in a tab-separated file.
         '''
-        if checked is None: return
-        if self.intensity is None: return
+        if checked is None: 
+            return
+        if self.intensity is None:
+            return
 
         names = [roi.objectName() for roi in self.rois]
         header = ['frame', 'time'] + names
@@ -252,7 +322,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     # Quit button -----------------------------------------------------
 
     def on_quit_button_clicked(self, checked=None):
-        if checked is None: return
+        if checked is None:
+            return
         if self.video is not None:
             self.video.close()
         self.close()
@@ -268,11 +339,12 @@ if __name__ == "__main__":
             help='Open video')
     args = parser.parse_args()
 
+    args.filename = '/home/antgon/Archive/Published data/2016_Orx-DTR/GCaMP-in-vitro/2016-02-12_Orx-GCaMP/2016-02-12_002.avi'
+
     app = QApplication([])
     window = MainWindow()
     if args.filename:
         window.open_video(args.filename)
     window.show()
 
-    #self = window
     QApplication.instance().exec_()
