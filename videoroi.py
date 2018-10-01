@@ -84,8 +84,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def setup_info(self):
         self.max_frame = self.video.frame_count - 1
         info_text = ('Framerate: {} fps | ' +
-                'Codec: {} | ' +
-                'Dimensions: {} x {}')
+                     'Codec: {} | ' +
+                     'Dimensions: {} x {}')
         self.statusbar_left.setText(info_text.format(
             self.video.fps,
             self.video.fourcc,
@@ -110,8 +110,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def get_video_frame(self, frame_number):
         ret_val, frame = self.video.read(frame_number)
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        frame = frame.astype('float') # pg crashes if a uint is passed
-        frame = frame.T # because pg rotates images by 90 deg.
+        frame = frame.astype('float')  # pg crashes if a uint is passed
+        frame = frame.T  # because pg rotates images by 90 deg.
         if self.autoLevel_button.isChecked():
             levels = (0.0, frame.max())
         else:
@@ -123,7 +123,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.frame, self.levels = self.get_video_frame(frame_number)
             self.img_item.setImage(self.frame, levels=self.levels)
             self.centre_label.setText("{}/{}".format(frame_number,
-                self.max_frame))
+                                                     self.max_frame))
             self.left_label.setText(fmt_frame_to_time(
                 frame_number, self.video.fps))
             self.right_label.setText('-' + fmt_frame_to_time(
@@ -155,7 +155,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.frame, levels = self.get_video_frame(frame_number=0)
         self.img_item.setImage(self.frame, levels)
         self.view_box.setRange(xRange=(0, self.video.width),
-                yRange=(0, self.video.height))
+                               yRange=(0, self.video.height))
 
         # Display video information.
         self.setWindowTitle(short_fname)
@@ -169,7 +169,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if checked is None:
             return
         self.view_box.setRange(xRange=(0, self.video.width),
-                yRange=(0, self.video.height))
+                               yRange=(0, self.video.height))
 
     # ROI buttons -----------------------------------------------------
 
@@ -208,15 +208,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # Set-up progress dialog.
         total_frame_count = self.video.frame_count * len(self.rois)
         total_frame_count -= 1
-        progress = QProgressDialog('Processing...', 'Cancel',
-                0, total_frame_count, parent=self)
+        progress = QProgressDialog(
+            'Processing...', 'Cancel', 0, total_frame_count,
+            parent=self)
         progress.setWindowModality(Qt.WindowModal)
 
         # Create array.
         frames = np.arange(self.video.frame_count)
         time = frames / self.video.fps
         self.intensity = np.empty([self.video.frame_count,
-            len(self.rois)])
+                                   len(self.rois)])
 
         # Loop over ROIs and frames and calculate mean intensity.
         for (roi_number, roi) in enumerate(self.rois):
@@ -266,10 +267,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         yfont.setPointSize(y_tick_fontsize)
         xfont.setPointSize(x_tick_fontsize)
 
-        x = self.intensity[:,0]
+        x = self.intensity[:, 0]
         self.plot_window = pg.GraphicsWindow(
                 title='Fluorescence intensity per ROI')
-        for c, y in enumerate(self.intensity[:,2:].T):
+        for c, y in enumerate(self.intensity[:, 2:].T):
             plt = self.plot_window.addPlot()
             plt.plot(x, y, pen=(3, 9))
             # Set x-axis label.
@@ -299,7 +300,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         filename = os.path.splitext(self.video.filename)
         filename = filename[0] + '.tab'
         np.savetxt(filename, self.intensity, fmt=fmt, header=header,
-                comments="")
+                   comments="")
         self.statusbar_right.setText("Data saved")
 
     # Quit button -----------------------------------------------------

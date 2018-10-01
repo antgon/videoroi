@@ -25,6 +25,7 @@ import cv2
 cv2_ver = cv2.__version__.split('.')
 assert int(cv2_ver[0]) >= 3
 
+
 class Video:
     '''
     A class for reading, seeking, and playing videos.
@@ -79,7 +80,7 @@ class Video:
             cv2.imshow(self.filename, frame)
             key = cv2.waitKey(1)
             if key == 27:
-                #self.capture.release()
+                # self.capture.release()
                 cv2.destroyWindow(self.filename)
                 break
 
