@@ -20,15 +20,11 @@ Requirements
 * [NumPy](http://www.numpy.org/)
 * [OpenCV](http://opencv.org/) version 3.0 or above
 
-PyQt5, PyQtGraph, and NumPy are available on the standard repositories;
-e.g. on Debian/Ubuntu/Raspbian run (as `su`):
+These are available on the standard repositories; e.g. on Debian/Ubuntu/
+Raspbian run (as `su`):
 
-    apt-get install python3-pyqtgraph python3-pyqt5 python3-numpy
-
-At the time of writing python bindings for opencv (`python-opencv`) on
-Debian repositories are only available for python 2.7, and provide
-OpenCV 2.4. Thus OpenCV 3 must be built and installed from source, which
-is annoying but not difficult. Details can be found on [OpenCV's website](http://docs.opencv.org/master/d7/d9f/tutorial_linux_install.html).
+    apt-get install python3-pyqtgraph python3-pyqt5 python3-numpy \
+    python3-opencv
 
 
 How to use
