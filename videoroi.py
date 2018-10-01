@@ -31,7 +31,7 @@ import numpy as np
 import cv2
 
 from ui.ui_main import Ui_MainWindow
-from video import Video
+from video import Video, VideoTiff
 
 
 def fmt_frame_to_time(frame, fps):
@@ -108,14 +108,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     # Display video ---------------------------------------------------
 
     def get_video_frame(self, frame_number):
-        ret_val, frame = self.video.read(frame_number)
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        frame = self.video.read(frame_number)
+        # If the video has 3 dfimensions it is assumed to be RGB; convert
+        # gray.
+        if frame.ndim == 3:
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         frame = frame.astype('float')  # pg crashes if a uint is passed
         frame = frame.T  # because pg rotates images by 90 deg.
         if self.autoLevel_button.isChecked():
             levels = (0.0, frame.max())
         else:
-            levels = (0.0, 255.0)
+            levels = (0.0, float(2**self.video.bits) - 1)  # (0.0, 255.0)
         return frame, levels
 
     def display_video_frame(self, frame_number):
@@ -135,7 +138,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         filename = QFileDialog.getOpenFileName(
                 self, caption='Open file...',
                 directory=self.working_dir,
-                filter='Video files (*.avi *.mp4 *.mov)')
+                filter='Video files (*.avi *.mp4 *.mov *.tif)')
         filename = filename[0]
         if not filename:
             return
@@ -149,7 +152,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.working_dir, short_fname = os.path.split(filename)
 
         # Open video.
-        self.video = Video(filename)
+        if os.path.splitext(filename)[-1] == ".tif":
+            self.video = VideoTiff(filename)
+        else:
+            self.video = Video(filename)
 
         # Read and display first frame.
         self.frame, levels = self.get_video_frame(frame_number=0)

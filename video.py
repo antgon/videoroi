@@ -45,6 +45,7 @@ class VideoTiff:
         if TIFF_SUPPORT is False:
             raise ModuleNotFoundError("Requires tifffile.py")
         self.capture = tifffile.imread(filename)
+        self.fourcc = 'N/A' # For compatibility with videoroi
         self._width = self.capture.shape[-1]
         self._height = self.capture.shape[-2]
         self._frame_count = self.capture.shape[-3]
@@ -53,12 +54,14 @@ class VideoTiff:
             fps = 1
         self._fps = fps
         self._current_frame = 0
+        self.bits = self.capture.dtype.itemsize * 8
         # An alternative implementation:
         # t = tifffile.TiffFile(filename)
         # page = t.pages[0]
         # page.imagelength, page.imagewidth
         # frame_count = len(t.pages)
         # im = t.pages[9].asarray()
+        # bits = page.bitspersample
 
     @property
     def width(self):
@@ -144,7 +147,7 @@ class VideoTiff:
             return '{:02}:{:02}'.format(int(m), int(s))
 
     def close(self):
-        # self.capture.release()
+        # Does nothing. Needed for compatibility with videoroi
         pass
 
 
@@ -174,7 +177,8 @@ class Video:
     def read(self, frame_number=None):
         if frame_number is not None:
             self.seek_frame(frame_number)
-        return self.capture.read()
+        ret_val, img = self.capture.read()
+        return img
 
     def _on_trackbar(self, frame_number):
         self.seek_frame(frame_number)
@@ -212,11 +216,11 @@ class Video:
     def seek_time(self, milliseconds=0):
         self.capture.set(cv2.CAP_PROP_POS_MSEC, milliseconds)
 
-    def get_pos_frames(self):
-        return int(self.capture.get(cv2.CAP_PROP_POS_FRAMES))
-
-    def get_pos_ms(self):
-        return self.capture.get(cv2.CAP_PROP_POS_MSEC)
+    # def get_pos_frames(self):
+    #     return int(self.capture.get(cv2.CAP_PROP_POS_FRAMES))
+    #
+    # def get_pos_ms(self):
+    #     return self.capture.get(cv2.CAP_PROP_POS_MSEC)
 
     def get_duration(self):
         '''
