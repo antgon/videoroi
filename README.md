@@ -19,12 +19,13 @@ Requirements
 * [PyQt5](https://riverbankcomputing.com/software/pyqt/intro)
 * [NumPy](http://www.numpy.org/)
 * [OpenCV](http://opencv.org/) version 3.0 or above
+* [Pandas](https://pandas.pydata.org/)
 
 These are available on the standard repositories; e.g. on Debian/Ubuntu/
 Raspbian run (as `su`):
 
     apt-get install python3-pyqtgraph python3-pyqt5 python3-numpy \
-    python3-opencv
+    python3-opencv python3-pandas
 
 
 How to use
