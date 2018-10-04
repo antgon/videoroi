@@ -18,14 +18,12 @@
 # You should have received a copy of the GNU General Public License
 # along with videoroi. If not, see <http://www.gnu.org/licenses/>.
 
-import sys
 import os
 
-from PyQt5.QtWidgets import (QMainWindow, QWidget, QMessageBox,
-                             QApplication, QDialog, QFileDialog,
-                             QLabel, QProgressDialog)
+from PyQt5.QtWidgets import (QMainWindow, QWidget, QApplication,
+                             QFileDialog, QLabel, QProgressDialog)
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFont
+from PyQt5 import QtGui
 import pyqtgraph as pg
 import numpy as np
 import cv2
@@ -33,12 +31,79 @@ import cv2
 from ui.ui_main import Ui_MainWindow
 from video import Video, VideoTiff
 
+ROI_PEN = (3, 9)
+
 
 def fmt_frame_to_time(frame, fps):
     seconds = frame / fps
     minutes = seconds // 60
     seconds = seconds % 60
     return '{:02}:{:05.2f}'.format(int(minutes), seconds)
+
+
+class Roi(pg.EllipseROI):
+    '''
+    A labelled ROI.
+
+    This is a subclass derived from pyqtgraph's EllipseROI with an
+    added label. Double clicking on it allows to change the label.
+    '''
+    def __init__(self, parent, pos, size, pen=ROI_PEN, **args):
+        # The label must be created before the actual ROI. If not, then
+        # the function `stateChanged` below will make the thing crash
+        # because it is triggered when the ROI is created.
+        self.lbl = pg.TextItem("", anchor = (0.5, 0.5), color=pen)
+        super().__init__(pos, size, pen=pen, removable=True, **args)
+        self.setParent(parent)
+        self.lbl.setPos(self.pos())
+        parent.view_box.addItem(self)
+        parent.view_box.addItem(self.lbl)
+
+    def setObjectName(self, name):
+        '''
+        Set the ROI's name.
+
+        Method from EllipseROI, overridden so that the label is updated
+        when the name of the ROI is set.
+        '''
+        self.lbl.setText(name)
+        super().setObjectName(name)
+
+    def stateChanged(self, finish=True):
+        '''
+        Method from EllipseROI, overridden so that the label moves with
+        its ROI.
+        '''
+        super().stateChanged(finish)
+        self.lbl.setPos(self.pos())
+        #pg.EllipseROI.stateChanged(self, finish)
+
+    def removeClicked(self):
+        '''
+        Remove both label and ROI when a remove event is requested.
+
+        Method from EllipseROI, overrdiden to remove the label together
+        with the ROI when there's a request to remove latter.
+        '''
+        self.parent().view_box.removeItem(self.lbl)
+        self.parent().view_box.removeItem(self)
+        super().removeClicked()
+
+    def mouseClickEvent(self, event):
+        '''
+        A double click pops-up a dialog to change the name of the ROI.
+
+        Method from EllipseROI, overrdiden to present a dialog to change
+        the label when the ROI is double clicked.
+        '''
+        if event.double():
+            text, okPressed = QtGui.QInputDialog.getText(
+                self.parent(), "Rename ROI", "ROI:",
+                QtGui.QLineEdit.Normal, text=self.objectName())
+            if okPressed and text != '':
+                self.setObjectName(text)
+        else:
+            super().mouseClickEvent(event)
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):
