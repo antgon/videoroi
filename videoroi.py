@@ -21,11 +21,12 @@
 import os
 
 from PyQt5.QtWidgets import (QMainWindow, QWidget, QApplication,
-                             QFileDialog, QLabel, QProgressDialog)
+                             QFileDialog, QLabel)
 from PyQt5.QtCore import Qt
 from PyQt5 import QtGui
 import pyqtgraph as pg
 import numpy as np
+import pandas as pd
 import cv2
 
 from ui.ui_main import Ui_MainWindow
@@ -52,7 +53,7 @@ class Roi(pg.EllipseROI):
         # The label must be created before the actual ROI. If not, then
         # the function `stateChanged` below will make the thing crash
         # because it is triggered when the ROI is created.
-        self.lbl = pg.TextItem("", anchor = (0.5, 0.5), color=pen)
+        self.lbl = pg.TextItem("", anchor=(0.5, 0.5), color=pen)
         super().__init__(pos, size, pen=pen, removable=True, **args)
         self.setParent(parent)
         self.lbl.setPos(self.pos())
@@ -76,7 +77,6 @@ class Roi(pg.EllipseROI):
         '''
         super().stateChanged(finish)
         self.lbl.setPos(self.pos())
-        #pg.EllipseROI.stateChanged(self, finish)
 
     def removeClicked(self):
         '''
@@ -112,7 +112,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         QWidget.__init__(self, parent)
         self.setupUi(self)
 
-        self.rois = []
         self.video = None
         self.intensity = None
         self.working_dir = os.path.expanduser('~')
@@ -121,6 +120,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.roi_box.setDisabled(True)
         self._init_image_item()
         self._init_statusbar()
+        self._roi_counter = 0
 
     def _init_image_item(self):
         self.layout = pg.GraphicsLayout()
@@ -244,14 +244,20 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     # ROI buttons -----------------------------------------------------
 
+    @property
+    def rois(self):
+        return [item for item in self.view_box.addedItems if
+                isinstance(item, Roi)]
+
     def on_add_roi_button_clicked(self, checked=None):
         if checked is None:
             return
+
         centre = (self.video.width/2, self.video.height/2)
-        roi = pg.EllipseROI(pos=centre, size=[50, 50], pen=(3, 9))
-        roi.setObjectName('roi{}'.format(len(self.rois)))
-        self.view_box.addItem(roi)
-        self.rois.append(roi)
+        roi = Roi(parent=self, pos=centre, size=(50, 50))
+        roi.setObjectName('roi{}'.format(self._roi_counter))
+        self._roi_counter += 1
+
         if not self.fluorescence_box.isEnabled():
             self.fluorescence_box.setEnabled(True)
 
@@ -260,41 +266,58 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             return
         if len(self.rois) == 0:
             return
+
         for roi in self.rois:
+            self.view_box.removeItem(roi.lbl)
             self.view_box.removeItem(roi)
-        self.rois = []
         self.intensity = None
         self.fluorescence_box.setDisabled(True)
+        self._roi_counter = 0
 
     # Fluorescence buttons --------------------------------------------
 
     def on_measure_button_clicked(self, checked=None):
         if checked is None:
             return
+
+        # Get the ROIs from the list of added items to the view box and sort
+        # them by object name.
         if len(self.rois) == 0:
             return
+        rois = sorted(self.rois, key=lambda x: x.objectName())
 
-        self.statusbar_right.setText("")
+        # Check if any names are duplicated. If so, stop and ask the
+        # user to rename the ofending ROI(s).
+        names = [roi.objectName() for roi in rois]
+        if len(set(names)) != len(names):
+            msg = ('Some ROI names are duplicated.\n' +
+                   'Fix this before continuing.')
+            QtGui.QMessageBox.warning(self.parent(), "Warning", msg)
+            return
 
         # Set-up progress dialog.
-        total_frame_count = self.video.frame_count * len(self.rois)
+        self.statusbar_right.setText("Measure")
+        total_frame_count = self.video.frame_count * len(rois)
         total_frame_count -= 1
-        progress = QProgressDialog(
+        progress = QtGui.QProgressDialog(
             'Processing...', 'Cancel', 0, total_frame_count,
             parent=self)
         progress.setWindowModality(Qt.WindowModal)
 
-        # Create array.
+        # Create a data frame to hold mean intensity values. Each row is a
+        # frame and each column is a ROI. Add also a 'time' column.
         frames = np.arange(self.video.frame_count)
-        time = frames / self.video.fps
-        self.intensity = np.empty([self.video.frame_count,
-                                   len(self.rois)])
+        self.intensity = pd.DataFrame(index=frames, columns=['time'] + names)
+        self.intensity.index.name = 'frame'
+        self.intensity.time = frames / self.video.fps
 
         # Loop over ROIs and frames and calculate mean intensity.
-        for (roi_number, roi) in enumerate(self.rois):
+        for (roi_number, roi) in enumerate(rois):
             mask = np.ones_like(self.frame)
             mask = roi.getArrayRegion(mask, self.img_item)
             mask = mask.astype('bool')
+            roi_name = roi.objectName()
+
             for frame_number in frames:
 
                 # Update progress dialog.
@@ -302,7 +325,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                         roi_number * self.video.frame_count)
                 progress.setValue(progress_frame)
 
-                # If the user cancells, clear data.
+                # If the user cancels, clear data.
                 if progress.wasCanceled():
                     self.intensity = None
                     return
@@ -311,11 +334,22 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 frame, _ = self.get_video_frame(frame_number)
                 data = roi.getArrayRegion(frame, self.img_item)
                 mean_intensity = data[mask].mean()
-                self.intensity[frame_number, roi_number] = (
-                        mean_intensity)
+                self.intensity.loc[frame_number, roi_name] = mean_intensity
 
-        # Concatenate intensity data with frames / time.
-        self.intensity = np.c_[frames, time, self.intensity]
+        # These lines calculate the intensity of the whole video without
+        # looping. They require the video to be fully loaded as a 3D arrray,
+        # which is the case when reading tiff files. However, with cv2 it is
+        # necessary to read one frame a time, sonce not all the frames are
+        # loaded at once when the video is opened. I've compared this 'fast'
+        # method to the startdard, looping one, and the results are identical.
+        # if IS_TIFF:
+        #     roi_region = roi.getArrayRegion(self.video.capture,
+        #                                     self.img_item, axes=(2, 1))
+        #     mask = roi_region.astype('bool')
+        #     roi_region[~mask] = np.nan
+        #     intensity = np.nanmean(roi_region, axis=(1, 2))
+        # else:
+        #     pass
 
         # Print message to statusbar.
         self.statusbar_right.setText("Done")
@@ -325,6 +359,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             return
         if self.intensity is None:
             return
+
+        self.statusbar_right.setText("")
 
         # Plot window properties. These should probably go in a
         # configuration file/section, but for my current purposes it is
@@ -338,12 +374,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         yfont.setPointSize(y_tick_fontsize)
         xfont.setPointSize(x_tick_fontsize)
 
-        x = self.intensity[:, 0]
         self.plot_window = pg.GraphicsWindow(
                 title='Fluorescence intensity per ROI')
-        for c, y in enumerate(self.intensity[:, 2:].T):
+        # First column is time so should be ignored.
+        for column in self.intensity.columns[1:]:
             plt = self.plot_window.addPlot()
-            plt.plot(x, y, pen=(3, 9))
+            y = self.intensity[column]
+            plt.plot(self.intensity.time, y, pen=(3, 9))
             # Set x-axis label.
             plt.setLabel('bottom', 'Frame')
             plt.getAxis('bottom').tickFont = xfont
@@ -363,15 +400,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if self.intensity is None:
             return
 
-        names = [roi.objectName() for roi in self.rois]
-        header = ['frame', 'time'] + names
-        header = '\t'.join(header)
-        fmt = '%i\t%f' + ('\t%.4f' * len(self.rois))
-
         filename = os.path.splitext(self.video.filename)
-        filename = filename[0] + '.tab'
-        np.savetxt(filename, self.intensity, fmt=fmt, header=header,
-                   comments="")
+        filename = filename[0] + '.tsv'
+        self.intensity.to_csv(filename, sep='\t')
         self.statusbar_right.setText("Data saved")
 
     # Quit button -----------------------------------------------------
