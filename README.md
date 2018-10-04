@@ -47,7 +47,9 @@ name as an extra argument to open that file directly.)
 
 3. Click *Add* to add a ROI. Drag the ROI to the cell of interest and
    adjust its size and shape as necessary. More than one ROI can be
-   added. *Clear* will remove all ROIs.
+   added. *Clear* will remove all ROIs. *Double click* on a ROI will allow
+   to change its name, and a *right click* will present a dialog with the
+   option to delete it.
 
 4. Click *Measure* to measure fluorescence in the ROIs across all
    frames in the video.
@@ -55,5 +57,31 @@ name as an extra argument to open that file directly.)
 5. Click *Plot* to display a plot of raw fluorescence by frame.
 
 6. Click *Save* to save the data (fluorescence per ROI by frame). The
-   data will be saved as csv file in the same directory as the source
+   data will be saved as tsv file in the same directory as the source
    video.
+
+7. Clicking the *Save* button in the ROI box will save the ROIs used as a tsv
+   file. This file can be loaded at a later stage to re-create the ROIs used.
+
+8. Right click on the working space to save an image (with ROIs) for future
+   reference.
+
+
+Alternatives
+------------
+
+A similar analysis could be done using Fiji/ImageJ by following these steps:
+
+1. Analyze --> Tools --> ROI Manager...
+
+2. Add ROIs: select shape from toolbar, add to image, then Add on ROI Manager.
+
+3. Tick Show All on ROI Manager to see them all.
+
+4. Select all ROIs on ROI Manager (shift click) - or deselect all.
+
+5. ROI Manager --> More >> Multi Measure
+
+6. Tick Measure all slices; untick One row per slice; click OK
+
+7. Save as csv.
