@@ -274,6 +274,65 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.fluorescence_box.setDisabled(True)
         self._roi_counter = 0
 
+    def on_load_rois_button_clicked(self, checked=None):
+        '''
+        Loads ROIs from a tab separated file. This file should consist of
+        a header, one line per ROI, and 6 columns:
+            roi_name, x_pos, y_pos, x_size, y_size, angle
+        '''
+        # TODO: The ROI file is hardcoded to be in the same place as video file
+        # and with extension _ROI.tsv. Change this so that user can choose the
+        # file instead.
+
+        if checked is None:
+            return
+        filename = os.path.splitext(self.video.filename)
+        filename = filename[0] + '_ROIs.tsv'
+
+        rois = pd.read_csv(filename, sep='\t')
+
+        for (index, roi) in rois.iterrows():
+            pos = (roi.x_pos, roi.y_pos)
+            size = (roi.x_size, roi.y_size)
+            new_roi = Roi(parent=self, pos=pos, size=size, angle=roi.angle)
+            new_roi.setObjectName(roi['name'])
+        self._roi_counter = index + 1
+
+        if not self.fluorescence_box.isEnabled():
+            self.fluorescence_box.setEnabled(True)
+
+    def on_save_rois_button_clicked(self, checked=None):
+        '''
+        Save ROIs as a tsv list. This is a file with a header, one line per ROI
+        and 6 columns:
+            roi_name, x_pos, y_pos, x_size, y_size, angle
+
+        This file can be loaded later to re-create these ROIs.
+        '''
+        if checked is None:
+            return
+
+        if len(self.rois) == 0:
+            self.statusbar_right.setText("Nothing to save")
+            return
+        filename = os.path.splitext(self.video.filename)
+        filename = filename[0] + '_ROIs.tsv'
+
+        headerfmt = '{}\t{}\t{}\t{}\t{}\t{}\n'
+        datafmt = '{}\t{:.6f}\t{:.6f}\t{:.6f}\t{:.6f}\t{:.6f}\n'
+        header = ("name", "x_pos", "y_pos", "x_size", "y_size", "angle")
+        header = headerfmt.format(*header)
+
+        f = open(filename, 'w')
+        f.write(header)
+        for roi in self.rois:
+            data = datafmt.format(roi.objectName(),
+                                  roi.pos().x(), roi.pos().y(),
+                                  roi.size().x(), roi.size().y(),
+                                  roi.angle())
+            f.write(data)
+        f.close()
+
     # Fluorescence buttons --------------------------------------------
 
     def on_measure_button_clicked(self, checked=None):

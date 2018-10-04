@@ -94,7 +94,7 @@ class VideoTiff:
         pointer will be the last frame in the video.
         '''
         if frame_number >= self.frame_count:
-            print("End of file reached.")
+            # print("End of file reached.")
             frame_number = self.frame_count - 1
         self._current_frame = frame_number
 

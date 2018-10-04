@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'main.ui'
 #
-# Created by: PyQt5 UI code generator 5.7
+# Created by: PyQt5 UI code generator 5.10.1
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -11,7 +11,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(712, 460)
+        MainWindow.resize(798, 524)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.gridLayout = QtWidgets.QGridLayout(self.centralwidget)
@@ -68,14 +68,24 @@ class Ui_MainWindow(object):
         self.verticalLayout_4.addWidget(self.groupBox)
         self.roi_box = QtWidgets.QGroupBox(self.centralwidget)
         self.roi_box.setObjectName("roi_box")
-        self.verticalLayout_2 = QtWidgets.QVBoxLayout(self.roi_box)
-        self.verticalLayout_2.setObjectName("verticalLayout_2")
-        self.add_roi_button = QtWidgets.QPushButton(self.roi_box)
-        self.add_roi_button.setObjectName("add_roi_button")
-        self.verticalLayout_2.addWidget(self.add_roi_button)
+        self.gridLayout_2 = QtWidgets.QGridLayout(self.roi_box)
+        self.gridLayout_2.setObjectName("gridLayout_2")
         self.clear_roi_button = QtWidgets.QPushButton(self.roi_box)
+        self.clear_roi_button.setMaximumSize(QtCore.QSize(50, 16777215))
         self.clear_roi_button.setObjectName("clear_roi_button")
-        self.verticalLayout_2.addWidget(self.clear_roi_button)
+        self.gridLayout_2.addWidget(self.clear_roi_button, 2, 0, 1, 1)
+        self.add_roi_button = QtWidgets.QPushButton(self.roi_box)
+        self.add_roi_button.setMaximumSize(QtCore.QSize(50, 16777215))
+        self.add_roi_button.setObjectName("add_roi_button")
+        self.gridLayout_2.addWidget(self.add_roi_button, 0, 0, 1, 1)
+        self.load_rois_button = QtWidgets.QPushButton(self.roi_box)
+        self.load_rois_button.setMaximumSize(QtCore.QSize(50, 16777215))
+        self.load_rois_button.setObjectName("load_rois_button")
+        self.gridLayout_2.addWidget(self.load_rois_button, 0, 1, 1, 1)
+        self.save_rois_button = QtWidgets.QPushButton(self.roi_box)
+        self.save_rois_button.setMaximumSize(QtCore.QSize(50, 16777215))
+        self.save_rois_button.setObjectName("save_rois_button")
+        self.gridLayout_2.addWidget(self.save_rois_button, 2, 1, 1, 1)
         self.verticalLayout_4.addWidget(self.roi_box)
         self.fluorescence_box = QtWidgets.QGroupBox(self.centralwidget)
         self.fluorescence_box.setObjectName("fluorescence_box")
@@ -115,8 +125,10 @@ class Ui_MainWindow(object):
         self.autoLevel_button.setText(_translate("MainWindow", "Auto level"))
         self.reset_view_button.setText(_translate("MainWindow", "Reset view"))
         self.roi_box.setTitle(_translate("MainWindow", "ROIs"))
-        self.add_roi_button.setText(_translate("MainWindow", "Add"))
         self.clear_roi_button.setText(_translate("MainWindow", "Clear"))
+        self.add_roi_button.setText(_translate("MainWindow", "Add"))
+        self.load_rois_button.setText(_translate("MainWindow", "Load"))
+        self.save_rois_button.setText(_translate("MainWindow", "Save"))
         self.fluorescence_box.setTitle(_translate("MainWindow", "Fluorescence"))
         self.measure_button.setText(_translate("MainWindow", "Measure"))
         self.plot_button.setText(_translate("MainWindow", "Plot"))
