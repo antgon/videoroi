@@ -30,7 +30,7 @@ import pandas as pd
 import cv2
 
 from ui.ui_main import Ui_MainWindow
-from video import Video, VideoTiff
+from video import Video
 
 ROI_PEN = (3, 9)
 
@@ -181,9 +181,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         frame = frame.astype('float')  # pg crashes if a uint is passed
         frame = frame.T  # because pg rotates images by 90 deg.
         if self.autoLevel_button.isChecked():
+            # If Auto level is selected, set the image display range to the
+            # maximum value in that frame.
             levels = (0.0, frame.max())
         else:
-            levels = (0.0, float(2**self.video.bits) - 1)  # (0.0, 255.0)
+            # If no Auto level, then the image is displayed in its full
+            # bit-depth range
+            levels = (0.0, float(2**self.video.bits_per_sample) - 1)
         return frame, levels
 
     def display_video_frame(self, frame_number):
@@ -203,7 +207,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         filename = QFileDialog.getOpenFileName(
                 self, caption='Open file...',
                 directory=self.working_dir,
-                filter='Video files (*.avi *.mp4 *.mov *.tif)')
+                filter='Video files (*.avi *.mp4 *.mov *.tif *.tiff)')
         filename = filename[0]
         if not filename:
             return
@@ -217,10 +221,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.working_dir, short_fname = os.path.split(filename)
 
         # Open video.
-        if os.path.splitext(filename)[-1] == ".tif":
-            self.video = VideoTiff(filename)
-        else:
-            self.video = Video(filename)
+        self.video = Video(filename)
 
         # Read and display first frame.
         self.frame, levels = self.get_video_frame(frame_number=0)
