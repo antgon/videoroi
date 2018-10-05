@@ -1,6 +1,6 @@
 #! /usr/bin/env python3
 #
-# Copyright (c) 2016-2017 Antonio González
+# Copyright (c) 2016-2018 Antonio González
 #
 # This file is part of videoroi.
 #
