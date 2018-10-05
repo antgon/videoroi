@@ -26,57 +26,40 @@ import cv2
 cv2_ver = cv2.__version__.split('.')
 assert int(cv2_ver[0]) >= 3
 
-# Optional: tiffffile to manage tif videos (i.e. multi-image tiffs)
-try:
-    from contrib import tifffile
-    TIFF_SUPPORT = True
-except ModuleNotFoundError:
-    TIFF_SUPPORT = False
 
-
-class VideoTiff:
-    '''
-    A class for reading a multi-frame tiff. Requires Christoph Gohlke's
-    tifffile.py, found here:
-    https://www.lfd.uci.edu/~gohlke/code/tifffile.py.html
-    '''
-    def __init__(self, filename, fps=None):
+class VideoBase:
+    def __init__(self, filename):
         self.filename = filename
-        if TIFF_SUPPORT is False:
-            raise ModuleNotFoundError("Requires tifffile.py")
-        self.capture = tifffile.imread(filename)
-        self.fourcc = 'N/A' # For compatibility with videoroi
-        self._width = self.capture.shape[-1]
-        self._height = self.capture.shape[-2]
-        self._frame_count = self.capture.shape[-3]
-        if fps is None:
-            warnings.warn("FPS is not defined, defaulting to 1.")
-            fps = 1
-        self._fps = fps
+        # Placeholders: all these properties must be defined by any
+        # class derived from this one.
+        self._width = None
+        self._height = None
+        self._frame_count = None
+        self._fps = None
+        self.bits_per_sample = None
+        # A counter to keep track of current frame.
         self._current_frame = 0
-        self.bits = self.capture.dtype.itemsize * 8
-        # An alternative implementation:
-        # t = tifffile.TiffFile(filename)
-        # page = t.pages[0]
-        # page.imagelength, page.imagewidth
-        # frame_count = len(t.pages)
-        # im = t.pages[9].asarray()
-        # bits = page.bitspersample
+        # FourCC is for information only; optional.
+        self.fourcc = None
 
     @property
-    def width(self):
-        return self._width
-
-    @property
-    def height(self):
-        return self._height
-
-    @property
-    def frame_count(self):
-        return self._frame_count
+    def duration_str(self):
+        '''
+        Returns total duration in string format h:m:s
+        '''
+        if self.duration is None:
+            return ''
+        else:
+            s = self.duration % 60
+            m = (self.duration // 60) % 60
+            h = self.duration // 3600
+            return '{:02.0f}:{:02.0f}:{:04.1f}'.format(h, m, s)
 
     @property
     def fps(self):
+        '''
+        Frames per second
+        '''
         return self._fps
 
     @fps.setter
@@ -84,8 +67,67 @@ class VideoTiff:
         self._fps = value
 
     @property
+    def width(self):
+        '''
+        Video width in px
+        '''
+        return self._width
+
+    @property
+    def height(self):
+        '''
+        Video height in px
+        '''
+        return self._height
+
+    @property
+    def frame_count(self):
+        '''
+        Number of frames in the video
+        '''
+        return self._frame_count
+
+    @property
     def duration(self):
+        '''
+        Duration in seconds
+        '''
         return self.frame_count / self.fps
+
+    def close(self):
+        # Does nothing by default, but needed for compatibility with
+        # videoroi
+        pass
+
+
+class VideoTiff(VideoBase):
+    '''
+    A class for reading a multi-frame tiff. Requires Christoph Gohlke's
+    tifffile.py, found here:
+    https://www.lfd.uci.edu/~gohlke/code/tifffile.py.html
+    '''
+    def __init__(self, filename, fps=None):
+        # Requires tiffffile to  multi-image tiff files.
+        from contrib import tifffile
+
+        super().__init__(filename)
+        self._frames = tifffile.imread(self.filename)
+        self._width = self._frames.shape[-1]
+        self._height = self._frames.shape[-2]
+        self._frame_count = self._frames.shape[-3]
+        if fps is None:
+            warnings.warn("FPS is not defined, defaulting to 1.")
+            fps = 1
+        self._fps = fps
+        self.bits_per_sample = self._frames.dtype.itemsize * 8
+
+        # An alternative implementation:
+        # t = tifffile.TiffFile(filename)
+        # page = t.pages[0]
+        # page.imagelength, page.imagewidth
+        # frame_count = len(t.pages)
+        # im = t.pages[9].asarray()
+        # bits = page.bitspersample
 
     def seek_frame(self, frame_number=0):
         '''
@@ -117,7 +159,7 @@ class VideoTiff:
             # frame before reading data.
             self.seek_frame(frame_number)
         # Read the video frame.
-        img = self.capture[self.pos_frames, :, :]
+        img = self._frames[self.pos_frames, :, :]
         # After reading the frame shift the pointer one place forward so that
         # the next read will return the next frame in the video.
         self.seek_frame(self.pos_frames + 1)
@@ -134,24 +176,8 @@ class VideoTiff:
         '''
         return self._current_frame / self.fps * 1000
 
-    @property
-    def duration_str(self):
-        '''
-        Returns total duration in string format min:sec
-        '''
-        if self.duration is None:
-            return ''
-        else:
-            m = self.duration // 60.
-            s = self.duration % 60.
-            return '{:02}:{:02}'.format(int(m), int(s))
 
-    def close(self):
-        # Does nothing. Needed for compatibility with videoroi
-        pass
-
-
-class Video:
+class VideoCv(VideoBase):
     '''
     A class for reading, seeking, and playing videos.
 
@@ -164,15 +190,25 @@ class Video:
         self.capture = cv2.VideoCapture(filename)
 
         if self.capture.isOpened():
-            self.width = int(self.capture.get(cv2.CAP_PROP_FRAME_WIDTH))
-            self.height = int(self.capture.get(
+            self._width = int(self.capture.get(cv2.CAP_PROP_FRAME_WIDTH))
+            self._height = int(self.capture.get(
                 cv2.CAP_PROP_FRAME_HEIGHT))
-            self.fps = int(self.capture.get(cv2.CAP_PROP_FPS))
-            self.frame_count = int(self.capture.get(
+            self._frame_count = int(self.capture.get(
                 cv2.CAP_PROP_FRAME_COUNT))
+            self._fps = self.capture.get(cv2.CAP_PROP_FPS)
             fourcc = int(self.capture.get(cv2.CAP_PROP_FOURCC))
             self.fourcc = fourcc.to_bytes(4, sys.byteorder).decode()
-            self.duration = self.frame_count / self.fps
+
+            # Read the first frame to get bit depth information
+            frame = self.read()
+            self.bits_per_sample = frame.dtype.itemsize * 8
+            self.seek_frame(0)
+
+    def seek_frame(self, frame_number=0):
+        self.capture.set(cv2.CAP_PROP_POS_FRAMES, frame_number)
+
+    def seek_time(self, milliseconds=0):
+        self.capture.set(cv2.CAP_PROP_POS_MSEC, milliseconds)
 
     def read(self, frame_number=None):
         if frame_number is not None:
@@ -180,27 +216,15 @@ class Video:
         ret_val, img = self.capture.read()
         return img
 
-    def _on_trackbar(self, frame_number):
-        self.seek_frame(frame_number)
-        ret_val, frame = self.read()
-        if ret_val:
-            cv2.imshow(self.filename, frame)
-
-    #def play(self):
-        #cv2.namedWindow(self.filename, cv2.WINDOW_AUTOSIZE)
-        #cv2.createTrackbar('Frame #', self.filename, 0,
-                #self.frame_count, self._on_trackbar)
-
-        #self.seek_frame(0)
-        #ret_val, frame = self.read()
-        #cv2.imshow(self.filename, frame)
-        #key = cv2.waitKey(0)
-        #if key == 27:
-            #cv2.destroyWindow(self.filename)
+    # def _on_trackbar(self, frame_number):
+    #     self.seek_frame(frame_number)
+    #     ret_val, frame = self.read()
+    #     if ret_val:
+    #         cv2.imshow(self.filename, frame)
 
     def play(self):
         while True:
-            ret_val, frame = self.read()
+            ret_val, frame = self.capture.read()
             if ret_val is False:
                 break
             cv2.imshow(self.filename, frame)
@@ -210,31 +234,20 @@ class Video:
                 cv2.destroyWindow(self.filename)
                 break
 
-    def seek_frame(self, frame_number=0):
-        self.capture.set(cv2.CAP_PROP_POS_FRAMES, frame_number)
+    @property
+    def pos_frames(self):
+        return int(self.capture.get(cv2.CAP_PROP_POS_FRAMES))
 
-    def seek_time(self, milliseconds=0):
-        self.capture.set(cv2.CAP_PROP_POS_MSEC, milliseconds)
-
-    # def get_pos_frames(self):
-    #     return int(self.capture.get(cv2.CAP_PROP_POS_FRAMES))
-    #
-    # def get_pos_ms(self):
-    #     return self.capture.get(cv2.CAP_PROP_POS_MSEC)
-
-    def get_duration(self):
-        '''
-        Returns total duration in string format min:sec
-        '''
-        m = self.duration // 60.
-        s = self.duration % 60.
-        return '{:02}:{:02}'.format(int(m), int(s))
+    @property
+    def pos_ms(self):
+        return self.capture.get(cv2.CAP_PROP_POS_MSEC)
 
     def close(self):
         self.capture.release()
 
 
-if __name__ == "__main__":
-    fname = os.path.expanduser("~/projects/photometry/glucose_in_vitro/" +
-                               "data/run1_Registered.tif")
-    vid = VideoTiff(fname)
+def Video(filename):
+    if os.path.splitext(filename)[-1] in (".tif", ".tiff"):
+        return VideoTiff(filename)
+    else:
+        return VideoCv(filename)
