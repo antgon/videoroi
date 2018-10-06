@@ -108,7 +108,7 @@ class VideoTiff(VideoBase):
     '''
     def __init__(self, filename, fps=None):
         # Requires tiffffile to  multi-image tiff files.
-        from contrib import tifffile
+        import tifffile
 
         super().__init__(filename)
         self._frames = tifffile.imread(self.filename)
