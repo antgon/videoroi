@@ -429,25 +429,50 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         x_tick_fontsize = 10
         y_tick_fontsize = 10
         plot_window_size = (600, 300)
+        min_left_axis_width = 0
         xfont = pg.QtGui.QFont()
         yfont = pg.QtGui.QFont()
         yfont.setPointSize(y_tick_fontsize)
         xfont.setPointSize(x_tick_fontsize)
 
-        self.plot_window = pg.GraphicsWindow(
-                title='Fluorescence intensity per ROI')
-        # First column is time so should be ignored.
+        self.plot_window = pg.GraphicsWindow(title='Mean ROI intensity')
+        plots = []
+        # The first column is time so should be ignored.
         for column in self.intensity.columns[1:]:
             plt = self.plot_window.addPlot()
             y = self.intensity[column]
             plt.plot(self.intensity.time, y, pen=(3, 9))
-            # Set x-axis label.
-            plt.setLabel('bottom', 'Frame')
-            plt.getAxis('bottom').tickFont = xfont
+
+            # Hide x labels.
+            plt.getAxis('bottom').setStyle(showValues=False)
+
             # Set y-axis label.
-            plt.setLabel('left', 'Raw intensity')
+            plt.setLabel('left', column)
             plt.getAxis('left').tickFont = yfont
+            # Keep track of the widest y-axis label to use it later to
+            # set all plots to this width.
+            this_width = plt.getAxis('left').width()
+            if this_width > min_left_axis_width:
+                min_left_axis_width = this_width
+
+            plots.append(plt)
             self.plot_window.nextRow()
+
+        # Once all plots are created, iterate over them to adjust their
+        # axes, etc.
+        for plt in plots:
+            # Adjust the left margin width to be the same for all plots
+            # so that they are vertically aligned. Add an extra margin
+            # to fit the axis label.
+            plt.getAxis('left').setWidth(min_left_axis_width + 30)
+            # Link x axis to that of the last plot.
+            plt.setXLink(plots[-1])
+
+        # Show x labels in the last plot.
+        plots[-1].setLabel('bottom', 'Time')
+        plots[-1].getAxis('bottom').tickFont = xfont
+        plots[-1].getAxis('bottom').setStyle(showValues=True)
+
         self.plot_window.resize(*plot_window_size)
         self.plot_window.show()
 
