@@ -174,15 +174,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def get_video_frame(self, frame_number):
         frame = self.video.read(frame_number)
-        # If the video has 3 dimensions it is assumed to be RGB; convert
-        # gray.
+        # If the video has 3 dimensions it is assumed to be RGB;
+        # convert to gray.
         if frame.ndim == 3:
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         frame = frame.astype('float')  # pg crashes if a uint is passed
         frame = frame.T  # because pg rotates images by 90 deg.
         if self.autoLevel_button.isChecked():
-            # If Auto level is selected, set the image display range to the
-            # maximum value in that frame.
+            # If Auto level is selected, set the image display range to
+            # the maximum value in that frame.
             levels = (0.0, frame.max())
         else:
             # If no Auto level, then the image is displayed in its full
@@ -277,13 +277,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def on_load_rois_button_clicked(self, checked=None):
         '''
-        Loads ROIs from a tab separated file. This file should consist of
-        a header, one line per ROI, and 6 columns:
+        Loads ROIs from a tab separated file. This file should consist
+        of a header, one line per ROI, and 6 columns:
             roi_name, x_pos, y_pos, x_size, y_size, angle
         '''
-        # TODO: The ROI file is hardcoded to be in the same place as video file
-        # and with extension _ROI.tsv. Change this so that user can choose the
-        # file instead.
+        # TODO: The ROI file is hardcoded to be in the same place as
+        # video file and with extension _ROI.tsv. Change this so that
+        # user can choose the file instead.
 
         if checked is None:
             return
@@ -295,7 +295,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         for (index, roi) in rois.iterrows():
             pos = (roi.x_pos, roi.y_pos)
             size = (roi.x_size, roi.y_size)
-            new_roi = Roi(parent=self, pos=pos, size=size, angle=roi.angle)
+            new_roi = Roi(parent=self, pos=pos, size=size,
+                          angle=roi.angle)
             new_roi.setObjectName(roi['name'])
         self._roi_counter = index + 1
 
@@ -304,8 +305,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def on_save_rois_button_clicked(self, checked=None):
         '''
-        Save ROIs as a tsv list. This is a file with a header, one line per ROI
-        and 6 columns:
+        Save ROIs as a tsv list. This is a file with a header, one line
+        per ROI and 6 columns:
             roi_name, x_pos, y_pos, x_size, y_size, angle
 
         This file can be loaded later to re-create these ROIs.
@@ -340,8 +341,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if checked is None:
             return
 
-        # Get the ROIs from the list of added items to the view box and sort
-        # them by object name.
+        # Get the ROIs from the list of added items to the view box and
+        # sort them by object name.
         if len(self.rois) == 0:
             return
         rois = sorted(self.rois, key=lambda x: x.objectName())
@@ -364,10 +365,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             parent=self)
         progress.setWindowModality(Qt.WindowModal)
 
-        # Create a data frame to hold mean intensity values. Each row is a
-        # frame and each column is a ROI. Add also a 'time' column.
+        # Create a data frame to hold mean intensity values. Each row
+        # is a frame and each column is a ROI. Add also a 'time'
+        # column.
         frames = np.arange(self.video.frame_count)
-        self.intensity = pd.DataFrame(index=frames, columns=['time'] + names)
+        self.intensity = pd.DataFrame(index=frames,
+                                      columns=['time'] + names)
         self.intensity.index.name = 'frame'
         self.intensity.time = frames / self.video.fps
 
@@ -394,17 +397,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 frame, _ = self.get_video_frame(frame_number)
                 data = roi.getArrayRegion(frame, self.img_item)
                 mean_intensity = data[mask].mean()
-                self.intensity.loc[frame_number, roi_name] = mean_intensity
+                self.intensity.loc[frame_number, roi_name] = (
+                        mean_intensity)
 
-        # These lines calculate the intensity of the whole video without
-        # looping. They require the video to be fully loaded as a 3D arrray,
-        # which is the case when reading tiff files. However, with cv2 it is
-        # necessary to read one frame a time, sonce not all the frames are
-        # loaded at once when the video is opened. I've compared this 'fast'
-        # method to the startdard, looping one, and the results are identical.
+        # These lines calculate the intensity of the whole video
+        # without looping. They require the video to be fully loaded as
+        # a 3D arrray, which is the case when reading tiff files.
+        # However, with cv2 it is necessary to read one frame at a
+        # time, so not all the frames are loaded at once when the video
+        # is opened. I've compared this 'fast' method to the startdard,
+        # looping one, and the results are identical.
         # if IS_TIFF:
-        #     roi_region = roi.getArrayRegion(self.video.capture,
-        #                                     self.img_item, axes=(2, 1))
+        #     roi_region = roi.getArrayRegion(
+        #         self.video.capture, self.img_item, axes=(2, 1))
         #     mask = roi_region.astype('bool')
         #     roi_region[~mask] = np.nan
         #     intensity = np.nanmean(roi_region, axis=(1, 2))
