@@ -174,7 +174,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def get_video_frame(self, frame_number):
         frame = self.video.read(frame_number)
-        # If the video has 3 dfimensions it is assumed to be RGB; convert
+        # If the video has 3 dimensions it is assumed to be RGB; convert
         # gray.
         if frame.ndim == 3:
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -469,7 +469,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             plt.setXLink(plots[-1])
 
         # Show x labels in the last plot.
-        plots[-1].setLabel('bottom', 'Time')
+        # If FPS is one, then FPS is probably not known, so label as
+        # 'Frame' instead of 'Time'.
+        if self.video.fps == 1:
+            xlabel = 'Frame'
+        else:
+            xlabel = 'Time'
+        plots[-1].setLabel('bottom', xlabel)
         plots[-1].getAxis('bottom').tickFont = xfont
         plots[-1].getAxis('bottom').setStyle(showValues=True)
 
