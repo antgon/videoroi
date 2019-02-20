@@ -312,7 +312,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         filename = os.path.splitext(self.video.filename)
         filename = filename[0] + '_ROIs.tsv'
 
-        rois = pd.read_csv(filename, sep='\t')
+        try:
+            rois = pd.read_csv(filename, sep='\t')
+        except FileNotFoundError as error:
+            msg = ("\n\nN.B. A ROI file is only loaded if it is " +
+                   "named after the main file and saved in the same" +
+                   " directory.")
+
+            QtGui.QMessageBox.information(self.parent(),
+                    "ROIs file not found", error.args[0] + msg)
+            return
 
         for (index, roi) in rois.iterrows():
             pos = (roi.x_pos, roi.y_pos)
