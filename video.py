@@ -113,7 +113,7 @@ class VideoTiff(VideoBase):
 
         # Requires tiffffile to handle multi-image tiff files.
         try:
-            import tifffiles
+            import tifffile
         except ModuleNotFoundError as error:
             msg = ("Requires `tiffffile` module, available on pip or\n" +
                    "at https://www.lfd.uci.edu/~gohlke/code/" +
