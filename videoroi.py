@@ -162,6 +162,23 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.right_label.setText('-' + fmt_frame_to_time(
             self.max_frame, self.video.fps))
 
+    def reset(self):
+        self.statusbar_left.setText("")
+        self.left_label.setText('00:00.00')
+        self.centre_label.setText('Frame 0/0')
+        self.right_label.setText('00:00.00')
+ 
+        self.fluorescence_box.setDisabled(True)
+        self.roi_box.setDisabled(True)
+        self.display_box.setDisabled(True)
+
+        if self.video is not None:
+            self.video.close()
+            self.clear_roi_button.click()
+            self.video = None
+            self.img_item.clear()
+
+
     # Scrollbar -------------------------------------------------------
 
     def on_scrollbar_valueChanged(self):
@@ -215,13 +232,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def open_video(self, filename):
         if self.video is not None:
-            self.video.close()
-            self.clear_roi_button.click()
+            self.reset()
 
         self.working_dir, short_fname = os.path.split(filename)
 
         # Open video.
-        self.video = Video(filename)
+        try:
+            self.video = Video(filename)
+        except ModuleNotFoundError as error:
+            msg = "Unable to open file: missing module.\n" + error.msg
+            QtGui.QMessageBox.critical(self.parent(), "Warning", msg)
+            return
 
         # Read and display first frame.
         self.frame, levels = self.get_video_frame(frame_number=0)
@@ -234,8 +255,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.setup_scrollbar()
         self.setup_info()
 
-        # Enable ROI group box.
+        # Enable ROI and Display group boxes.
         self.roi_box.setEnabled(True)
+        self.display_box.setEnabled(True)
 
     def on_reset_view_button_clicked(self, checked=None):
         if checked is None:

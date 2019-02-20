@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'main.ui'
 #
-# Created by: PyQt5 UI code generator 5.10.1
+# Created by: PyQt5 UI code generator 5.11.2
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -54,18 +54,18 @@ class Ui_MainWindow(object):
         self.verticalLayout_4.addWidget(self.open_video_button)
         spacerItem2 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout_4.addItem(spacerItem2)
-        self.groupBox = QtWidgets.QGroupBox(self.centralwidget)
-        self.groupBox.setObjectName("groupBox")
-        self.verticalLayout_5 = QtWidgets.QVBoxLayout(self.groupBox)
+        self.display_box = QtWidgets.QGroupBox(self.centralwidget)
+        self.display_box.setObjectName("display_box")
+        self.verticalLayout_5 = QtWidgets.QVBoxLayout(self.display_box)
         self.verticalLayout_5.setObjectName("verticalLayout_5")
-        self.autoLevel_button = QtWidgets.QRadioButton(self.groupBox)
+        self.autoLevel_button = QtWidgets.QRadioButton(self.display_box)
         self.autoLevel_button.setChecked(True)
         self.autoLevel_button.setObjectName("autoLevel_button")
         self.verticalLayout_5.addWidget(self.autoLevel_button)
-        self.reset_view_button = QtWidgets.QPushButton(self.groupBox)
+        self.reset_view_button = QtWidgets.QPushButton(self.display_box)
         self.reset_view_button.setObjectName("reset_view_button")
         self.verticalLayout_5.addWidget(self.reset_view_button)
-        self.verticalLayout_4.addWidget(self.groupBox)
+        self.verticalLayout_4.addWidget(self.display_box)
         self.roi_box = QtWidgets.QGroupBox(self.centralwidget)
         self.roi_box.setObjectName("roi_box")
         self.gridLayout_2 = QtWidgets.QGridLayout(self.roi_box)
@@ -121,7 +121,7 @@ class Ui_MainWindow(object):
         MainWindow.setWindowTitle(_translate("MainWindow", "Video ROI"))
         self.open_video_button.setText(_translate("MainWindow", "&Open"))
         self.open_video_button.setShortcut(_translate("MainWindow", "Ctrl+O"))
-        self.groupBox.setTitle(_translate("MainWindow", "Display"))
+        self.display_box.setTitle(_translate("MainWindow", "Display"))
         self.autoLevel_button.setText(_translate("MainWindow", "Auto level"))
         self.reset_view_button.setText(_translate("MainWindow", "Reset view"))
         self.roi_box.setTitle(_translate("MainWindow", "ROIs"))
