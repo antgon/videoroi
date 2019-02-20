@@ -104,11 +104,21 @@ class VideoTiff(VideoBase):
     '''
     A class for reading a multi-frame tiff. Requires Christoph Gohlke's
     tifffile.py, found here:
+
     https://www.lfd.uci.edu/~gohlke/code/tifffile.py.html
+
+    (also available on pip).
     '''
     def __init__(self, filename, fps=None):
-        # Requires tiffffile to  multi-image tiff files.
-        import tifffile
+
+        # Requires tiffffile to handle multi-image tiff files.
+        try:
+            import tifffiles
+        except ModuleNotFoundError as error:
+            msg = ("Requires `tiffffile` module, available on pip or\n" +
+                   "at https://www.lfd.uci.edu/~gohlke/code/" +
+                   "tifffile.py.html")
+            raise ModuleNotFoundError(msg) from error
 
         super().__init__(filename)
         self._frames = tifffile.imread(self.filename)
@@ -132,8 +142,8 @@ class VideoTiff(VideoBase):
     def seek_frame(self, frame_number=0):
         '''
         Moves the pointer to frame `frame_number` (0-based index). If
-        `frame_number` is greater than the total number of frames, then the
-        pointer will be the last frame in the video.
+        `frame_number` is greater than the total number of frames, then
+        the pointer will be the last frame in the video.
         '''
         if frame_number >= self.frame_count:
             # print("End of file reached.")
@@ -151,17 +161,18 @@ class VideoTiff(VideoBase):
 
     def read(self, frame_number=None):
         '''
-        Returns video frame `frame_number` (0-based index). If no frame_number
-        is specified, the frame returned will be
+        Returns video frame `frame_number` (0-based index). If no
+        frame_number is specified, the frame returned will be
         '''
         if frame_number is not None:
-            # If a specific frame has been requested move the pointer to that
-            # frame before reading data.
+            # If a specific frame has been requested move the pointer
+            # to that frame before reading data.
             self.seek_frame(frame_number)
         # Read the video frame.
         img = self._frames[self.pos_frames, :, :]
-        # After reading the frame shift the pointer one place forward so that
-        # the next read will return the next frame in the video.
+        # After reading the frame shift the pointer one place forward
+        # so that the next read will return the next frame in the
+        # video.
         self.seek_frame(self.pos_frames + 1)
         return img
 
