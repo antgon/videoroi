@@ -24,7 +24,8 @@ import warnings
 # Requires OpenCV 3
 import cv2
 cv2_ver = cv2.__version__.split('.')
-assert int(cv2_ver[0]) >= 3
+if int(cv2_ver[0]) < 3:
+    raise ImportError("Requires OpenCV ver. 3")
 
 
 class VideoBase:
