@@ -175,10 +175,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         if self.video is not None:
             self.video.close()
-            self.clear_roi_button.click()
+            self.clear_rois()
             self.video = None
             self.img_item.clear()
-
 
     # Scrollbar -------------------------------------------------------
 
@@ -285,9 +284,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if not self.fluorescence_box.isEnabled():
             self.fluorescence_box.setEnabled(True)
 
-    def on_clear_roi_button_clicked(self, checked=None):
-        if checked is None:
-            return
+    def clear_rois(self):
         if len(self.rois) == 0:
             return
 
@@ -297,6 +294,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.intensity = None
         self.fluorescence_box.setDisabled(True)
         self._roi_counter = 0
+
+    def on_clear_roi_button_clicked(self, checked=None):
+        if checked is None:
+            return
+        self.clear_rois()
 
     def on_load_rois_button_clicked(self, checked=None):
         '''
