@@ -33,6 +33,7 @@ from ui.ui_main import Ui_MainWindow
 from video import Video
 
 ROI_PEN = (3, 9)
+OUT_TABLE_FMT = 'long' # long | wide
 
 
 def fmt_frame_to_time(frame, fps):
@@ -529,7 +530,22 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         filename = os.path.splitext(self.video.filename)
         filename = filename[0] + '.tsv'
-        self.intensity.to_csv(filename, sep='\t')
+
+        if OUT_TABLE_FMT == 'long':
+            # Convert table from wide to long format
+            intensity = self.intensity.reset_index()
+            intensity = intensity.melt(
+                    id_vars = ['frame', 'time'],
+                    var_name = 'roi',
+                    value_name = 'intensity')
+            intensity.to_csv(filename, sep='\t', index = False)
+
+        elif OUT_TABLE_FMT == 'wide':
+            self.intensity.to_csv(filename, sep='\t', index = True)
+
+        else:
+            raise ValueError("OUT_TABLE_FMT must be 'wide' or 'long'")
+
         self.statusbar_right.setText("Data saved")
 
     # Quit button -----------------------------------------------------
