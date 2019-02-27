@@ -102,26 +102,40 @@ class VideoBase:
 
 class VideoTiff(VideoBase):
     '''
-    A class for reading a multi-frame tiff. Requires Christoph Gohlke's
-    tifffile.py, found here:
-
-    https://www.lfd.uci.edu/~gohlke/code/tifffile.py.html
-
-    (also available on pip).
+    A class for reading a multi-frame tiff. Requires skimage
+    (scikit-image, https://scikit-image.org/) or tifffile 
+    (https://www.lfd.uci.edu/~gohlke/code/tifffile.py.html)
+    modules. Both are availble from pip.
     '''
     def __init__(self, filename, fps=None):
 
-        # Requires tiffffile to handle multi-image tiff files.
+        # Requires skimage or tiffffile to handle multi-image tiff
+        # files.
+
+        # N.B. I have some 16-bit tiff files that cannot be opened with
+        # the latest (2019.2.22) tifffile module ("NotImplementedError:
+        # unpacking 12-bit integers to uint16 not supported") but they
+        # can be opened if I use skimage, albeit with a warning ("tags
+        # are not ordered by code"). It turns out that skimage uses
+        # tifffile too to open tiff files, but an older version
+        # (2017.01.12). For this reason I am setting skimage as the
+        # first option. This may change in the future.
+
+        # Also PIL and Matplotlib cannot deal with mutliframe tiffs:
+        # they only load the first frame.
+
         try:
-            import tifffile
-        except ModuleNotFoundError as error:
-            msg = ("Requires `tiffffile` module, available on pip or\n" +
-                   "at https://www.lfd.uci.edu/~gohlke/code/" +
-                   "tifffile.py.html")
-            raise ModuleNotFoundError(msg) from error
+            from skimage.io import imread
+        except ModuleNotFoundError:
+            try:
+                from tifffile import imread
+            except ModuleNotFoundError as error:
+                msg = ("Requires `scikit-image` or `tifffile` module" +
+                        ", available from pip.")
+                raise ModuleNotFoundError(msg) from error
 
         super().__init__(filename)
-        self._frames = tifffile.imread(self.filename)
+        self._frames = imread(self.filename)
         self._width = self._frames.shape[-1]
         self._height = self._frames.shape[-2]
         self._frame_count = self._frames.shape[-3]
@@ -130,14 +144,6 @@ class VideoTiff(VideoBase):
             fps = 1
         self._fps = fps
         self.bits_per_sample = self._frames.dtype.itemsize * 8
-
-        # An alternative implementation:
-        # t = tifffile.TiffFile(filename)
-        # page = t.pages[0]
-        # page.imagelength, page.imagewidth
-        # frame_count = len(t.pages)
-        # im = t.pages[9].asarray()
-        # bits = page.bitspersample
 
     def seek_frame(self, frame_number=0):
         '''
