@@ -29,8 +29,8 @@ Raspbian run (as `su`):
     apt-get install python3-pyqtgraph python3-pyqt5 python3-numpy python3-opencv python3-pandas
 
 Additional support for TIFF videos (i.e. multi-frame TIFF files) requires
-Christoph Gohlke's [`tifffile.py`](https://www.lfd.uci.edu/~gohlke/),
-which can be installed using pip.
+Christoph Gohlke's [`tifffile.py`](https://www.lfd.uci.edu/~gohlke/) or
+[`scikit-image`](https://scikit-image.org/). Both are availble from pip.
 
 
 How to use
