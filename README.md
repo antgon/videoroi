@@ -4,9 +4,9 @@ VideoROI
 Get mean fluorescence intensity from one or more regions of interest
 (ROI) in a video.
 
-Originally written to obtain fluorescence changes over time in cells *in
-vitro* that express a calcium indicator (see Suppl. Fig. 3 in González
-*et al*, [Curr Biol 26: 2486, 2016](http://dx.doi.org/10.1016/j.cub.2016.07.013).
+Originally written to obtain fluorescence changes over time in cells *ex
+vivo* that express a calcium indicator (see Suppl. Fig. 3 in González
+*et al*, [Curr Biol 26: 2486, 2016](http://dx.doi.org/10.1016/j.cub.2016.07.013)).
 
 Copyright (c) 2016-2018, Antonio González.
 
@@ -41,9 +41,13 @@ Run
     python3 videoroi.py
 
 from the command window to launch VideoROI (optional: pass a video file
-name as an extra argument to open that file directly). Then:
+name as an extra argument to open that file directly).
+
+Then:
 
 1. *Open* a video file.
+
+![videoroi](img/img1.png)
 
 2. With the slider at the bottom of the widow navigate to a frame in the
 video where a fluorescent cell or cells can be clearly seen. The mouse
@@ -53,16 +57,22 @@ zooming/dragging. *Auto level* will stretch the image depth to its
 maximum; deselect to display the image in the video's full bit-depth
 range.
 
+![opened_video](img/img2.png)
+
 3. Click *Add* to add a ROI. Drag the ROI to the cell of interest and
 adjust its size and shape as necessary. More than one ROI can be added.
 *Clear* will remove all ROIs. *Double clicking* on a ROI will allow to
 change its name, and a *right click* will present a dialog with the
 option to remove it.
 
+![img_with_rois](img/img3.png)
+
 4. Click *Measure* to calculate mean intensity in each ROI across all
 frames in the video.
 
-5. Click *Plot* to display the measured intensity by frame.
+5. Click *Plot* to display the measured intensity by frame on a new window.
+
+![data_plot](img/img4.png)
 
 6. Click *Save* to save the data (intensity by ROI and frame). The data
 will be saved as a tab-separated values (.tsv) file in the same
